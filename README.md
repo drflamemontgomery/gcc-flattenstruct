@@ -21,5 +21,21 @@ Compiling using this plugin is just like any other GCC plugin
 # Examples
 
 ```c
+struct s1 {
+    int field1;
+};
 
+struct s2 {
+    struct s1 super __attribute__((flatten_struct));
+    int field2;
+};
+
+// struct s2 test;
+// test.super.field1 = 1;
+// test.field1 = 2;
+// test.field2 = 3;
+//
+// assert(test.super.field1 == 2);
+// assert(test.field1 == 2);
+// assert(test.field2 == 3);
 ```

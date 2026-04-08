@@ -1,7 +1,14 @@
 [
 {
-  "directory": "/home/looking/C/plugins/gcc-flattenstruct",
+  "directory": ".",
   "command": "g++ -shared -I/usr/local/lib/gcc/x86_64-pc-linux-gnu/16.0.0/plugin/include -fPIC -fno-rtti -O2 src/flattenstruct.c -o flattenstruct.so",
-  "file": "/home/looking/C/plugins/gcc-flattenstruct/src/flattenstruct.c",
-  "output": "/home/looking/C/plugins/gcc-flattenstruct/flattenstruct.so"
+  "file": "src/flattenstruct.c",
+  "output": "flattenstruct.so"
 },
+{
+  "directory": ".",
+  "command": "gcc -fplugin=flattenstruct.so examples/basic.c -o bin/basic",
+  "file": "examples/basic.c",
+  "output": "bin/basic"
+}
+]

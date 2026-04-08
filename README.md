@@ -30,11 +30,11 @@ struct s2 {
   int field2;
 };
 
-// struct s2 {
-//   [[gnu::flatten_struct]]
-//   struct s1 super; 
-//   int field2;
-// };
+struct s2 {
+  [[gnu::flatten_struct]]
+  struct s1 super; 
+  int field2;
+};
 
 // struct s2 test;
 // test.super.field1 = 1;

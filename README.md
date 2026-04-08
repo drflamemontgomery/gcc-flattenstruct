@@ -22,13 +22,19 @@ Compiling using this plugin is just like any other GCC plugin
 
 ```c
 struct s1 {
-    int field1;
+  int field1;
 };
 
 struct s2 {
-    struct s1 super __attribute__((flatten_struct));
-    int field2;
+  struct s1 super __attribute__((flatten_struct));
+  int field2;
 };
+
+// struct s2 {
+//   [[gnu::flatten_struct]]
+//   struct s1 super; 
+//   int field2;
+// };
 
 // struct s2 test;
 // test.super.field1 = 1;

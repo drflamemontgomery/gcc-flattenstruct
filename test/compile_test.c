@@ -10,10 +10,10 @@ struct b {
 };
 
 struct c {
-  [[gnu::flatten_struct]]
+  [[gnu::flatten_struct(true)]]
   struct a super;
 
-  int c;
+  int b;
 };
 
 int main(void) {

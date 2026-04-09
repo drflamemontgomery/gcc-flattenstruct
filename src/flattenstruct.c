@@ -1,4 +1,5 @@
 #include "gcc-plugin.h"
+#include "input.h"
 #include "plugin-version.h"
 
 #include "diagnostic.h"
@@ -6,6 +7,7 @@
 #include "tree.h"
 
 #include "attribs.h"
+#include <cstring>
 
 // Required field for plugin to work
 int plugin_is_GPL_compatible;
@@ -54,6 +56,46 @@ static void remove_attribute(tree node, const char *attribute) {
   }
 }
 
+static bool contains_field(tree type, tree identifier) {
+  if (TREE_CODE(type) != RECORD_TYPE)
+    return false;
+
+  const char *id = IDENTIFIER_POINTER(identifier);
+
+  for (tree field = TYPE_FIELDS(type); field; field = TREE_CHAIN(field)) {
+
+    if (DECL_NAME(field) == NULL_TREE && contains_field(field, identifier)) {
+      return true;
+    }
+    if (strcmp(IDENTIFIER_POINTER(DECL_NAME(field)), id) == 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+static tree copy_struct_no_duplicate(tree type, tree conflicting_type) {
+  tree new_type = make_node(RECORD_TYPE);
+  TYPE_NAME(new_type) = NULL_TREE;
+
+  tree fields = NULL_TREE;
+  tree *tail = &fields;
+  for (tree field = TYPE_FIELDS(type); field; field = DECL_CHAIN(field)) {
+    if (contains_field(conflicting_type, DECL_NAME(field))) {
+      continue;
+    }
+
+    tree new_field = copy_field(field, new_type);
+    DECL_CHAIN(new_field) = fields;
+    fields = new_field;
+  }
+
+  TYPE_FIELDS(new_type) = fields;
+
+  return new_type;
+}
+
 static void finish_type(void *event_data, void *data) {
   tree type = (tree)event_data;
 
@@ -73,17 +115,39 @@ static void finish_type(void *event_data, void *data) {
       continue;
     }
 
-    if (lookup_attribute("flatten_struct", DECL_ATTRIBUTES(field))) {
-      tree replacement = copy_field(field, DECL_CONTEXT(field));
-      DECL_NAME(replacement) = NULL_TREE;
+    tree flatten_struct_attr;
+    if ((flatten_struct_attr =
+             lookup_attribute("flatten_struct", DECL_ATTRIBUTES(field)))) {
 
-      remove_attribute(replacement, "flatten_struct");
+      tree anon_field = copy_field(field, DECL_CONTEXT(field));
+      DECL_NAME(anon_field) = NULL_TREE;
+
+      tree arguments = TREE_VALUE(flatten_struct_attr);
+      if (arguments) {
+        tree ignore_duplicates = TREE_VALUE(arguments);
+        if (TREE_CODE(ignore_duplicates) == INTEGER_CST) {
+          if (TREE_INT_CST_LOW(ignore_duplicates)) {
+            tree anon_type = copy_struct_no_duplicate(TREE_TYPE(field), type);
+            TREE_TYPE(anon_field) = anon_type;
+          }
+        } else {
+          warning(UNKNOWN_LOCATION,
+                  "ignoring non-integer argument to 'flatten_struct'");
+        }
+      }
+      
+      for(tree f = TYPE_FIELDS(TREE_TYPE(anon_field)); f; f = DECL_CHAIN(f)) {
+        if(!contains_field(type, DECL_NAME(f))) continue;
+        error("Duplicate member '%s'", IDENTIFIER_POINTER(DECL_NAME(f)));
+      }
+
+      remove_attribute(anon_field, "flatten_struct");
       remove_attribute(field, "flatten_struct");
 
-      DECL_CHAIN(replacement) = DECL_CHAIN(field);
-      DECL_CHAIN(field) = replacement;
+      DECL_CHAIN(anon_field) = DECL_CHAIN(field);
+      DECL_CHAIN(field) = anon_field;
 
-      *prev = field;
+      prev = &DECL_CHAIN(anon_field);
       continue;
     }
 
@@ -103,7 +167,7 @@ static tree handle_flatten_attr(tree *node, tree name, tree args, int flags,
 }
 
 static struct attribute_spec flatten_attr = {
-    "flatten_struct",    0,    0, false, false, false, false,
+    "flatten_struct",    0,    1, true, false, false, false,
     handle_flatten_attr, NULL,
 };
 

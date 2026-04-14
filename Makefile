@@ -4,6 +4,7 @@ PLUGIN_SOURCE_FILES= src/flattenstruct.c
 GCCPLUGINS_DIR:= $(shell $(TARGET_GCC) -print-file-name=plugin)
 CXXFLAGS+= -I$(GCCPLUGINS_DIR)/include -fPIC -fno-rtti -O0 -g3
 EXAMPLES+= bin/basic
+TESTS+= bin/compile_test bin/multi_inheritance
 
 default: build
 
@@ -24,16 +25,19 @@ bin:
 	mkdir -p bin
 
 .PHONY: examples
-examples: bin $(EXAMPLES)
+examples: flattenstruct.so bin $(EXAMPLES)
 
 bin/%: examples/%.c
 	$(TARGET_GCC) -fplugin=./flattenstruct.so $^ -o $@
 
+bin/%: test/%.c
+	$(TARGET_GCC) -fplugin=./flattenstruct.so $^ -o $@
+
 .PHONY: test
-test: flattenstruct.so
-	$(TARGET_GCC) -fplugin=./flattenstruct.so -c test/compile_test.c -o /dev/null
+test: flattenstruct.so bin $(TESTS)
 	# Passed Tests
 
 .PHONY: clean
 clean:
 	rm -f flattenstruct.so
+	rm -f bin/*

@@ -10,10 +10,10 @@ struct b {
 };
 
 struct c {
-  [[gnu::flatten_struct(true)]]
+  [[gnu::flatten_struct(true, true)]]
   struct a super;
 
-  int b;
+  int c;
 };
 
 int main(void) {
@@ -26,8 +26,8 @@ int main(void) {
 
   struct c c;
   c.b = 3;
-  printf("c.super.b = %d\n", c.super.b);
+  printf("c.super.b = %d\n", c.b);
 
-  c.super.b = 4;
+  c.b = 4;
   printf("c.b = %d\n", c.b);
 }

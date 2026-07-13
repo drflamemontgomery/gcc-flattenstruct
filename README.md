@@ -1,4 +1,4 @@
-# gcc-flattenstruct
+# GCC Struct Inheritance Plugin
 
 A GCC Plugin for adding more control over nested structure scope. 
 The main purpose of this is to have a more OOP feel to C without having to 
